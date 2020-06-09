@@ -1,6 +1,5 @@
 package com.view.kotlin
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.ImageFormat
 import android.hardware.camera2.*
@@ -16,14 +15,20 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_camera.*
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.util.*
 
-class MainActivity : AppCompatActivity() ,View.OnClickListener{
+class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private val ORIENTATIONS = SparseIntArray()
+
+    init {
+        ORIENTATIONS.append(Surface.ROTATION_0, 90)
+        ORIENTATIONS.append(Surface.ROTATION_90, 0)
+        ORIENTATIONS.append(Surface.ROTATION_180, 270)
+        ORIENTATIONS.append(Surface.ROTATION_270, 180)
+    }
 
     private var surfaceHolder: SurfaceHolder? = null
 
@@ -39,23 +44,24 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
     private var captureSession: CameraCaptureSession? = null
     private var cameraDevice: CameraDevice? = null
     private var surView: SurfaceView? = null
-    private var previewBuilder:CaptureRequest.Builder?=null
+    private var previewBuilder: CaptureRequest.Builder? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_camera)
 
-        ORIENTATIONS.append(Surface.ROTATION_0, 90)
-        ORIENTATIONS.append(Surface.ROTATION_90, 0)
-        ORIENTATIONS.append(Surface.ROTATION_180, 270)
-        ORIENTATIONS.append(Surface.ROTATION_270, 180)
 
-        surView=findViewById(R.id.surView)
+
+        surView = findViewById(R.id.surView)
         button.setOnClickListener(this)
         btnOpenFront.setOnClickListener(this)
         btnOpenBack.setOnClickListener(this)
         btnClose.setOnClickListener(this)
-
+        if (imageReader==null){
+            Log.e("w","q")
+        }else{
+            Log.e("e","q")
+        }
         surfaceHolder = surView?.getHolder()
         surfaceHolder?.setKeepScreenOn(true)
         surfaceHolder?.addCallback(object : SurfaceHolder.Callback {
@@ -77,17 +83,18 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
     }
 
     override fun onClick(v: View?) {
-        when(v?.id){
-            R.id.btnOpenFront-> openCamera(1)
-            R.id.btnOpenBack-> openCamera(0)
-            R.id.btnClose-> closeCamera()
-            R.id.btnStart-> takePreview()
-            R.id.btnStop-> {
+        when (v?.id) {
+            R.id.btnOpenFront -> openCamera(1)
+            R.id.btnOpenBack -> openCamera(0)
+            R.id.btnClose -> closeCamera()
+            R.id.btnStart -> takePreview()
+            R.id.btnStop -> {
                 captureSession?.stopRepeating()
             }
-            R.id.button-> takePicture()
+            R.id.button -> takePicture()
         }
     }
+
     private fun initCamera() {
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         val handlerThread = HandlerThread("Camera2")
@@ -102,7 +109,8 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
             val buffer = image.planes[0].buffer
             val bytes = ByteArray(buffer.remaining())
             buffer[bytes] //由缓冲区存入字节数组
-            val path: String =Environment.getExternalStorageDirectory().absolutePath+"/kotlin/"+System.currentTimeMillis()+ ".jpg"
+            val path: String =
+                Environment.getExternalStorageDirectory().absolutePath + "/kotlin/" + System.currentTimeMillis() + ".jpg"
 
             Log.e("pictureCallback", path)
 
@@ -135,7 +143,7 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
                     }
 
                     override fun onDisconnected(camera: CameraDevice) {
-                        this@MainActivity.cameraDevice?.close()
+                        this@CameraActivity.cameraDevice?.close()
                     }
 
                     override fun onError(camera: CameraDevice, error: Int) {
@@ -157,7 +165,9 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
             previewBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             // 将SurfaceView的surface作为CaptureRequest.Builder的目标
             previewBuilder!!.addTarget(surfaceHolder!!.surface)
-            cameraDevice!!.createCaptureSession(listOf(surfaceHolder!!.surface,imageReader!!.surface), object : CameraCaptureSession.StateCallback() {
+            cameraDevice!!.createCaptureSession(
+                listOf(surfaceHolder!!.surface, imageReader!!.surface),
+                object : CameraCaptureSession.StateCallback() {
                     override fun onConfigured(session: CameraCaptureSession) {
                         if (null == cameraDevice) {
                             return
@@ -166,11 +176,20 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
                         try {
                             // 开启3A模式  自动对焦 自动白平衡 自动曝光
                             // 自动对焦
-                            previewBuilder!!.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                            previewBuilder!!.set(
+                                CaptureRequest.CONTROL_AF_MODE,
+                                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                            )
                             //自动白平衡
-                            previewBuilder!!.set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO)
+                            previewBuilder!!.set(
+                                CaptureRequest.CONTROL_AWB_MODE,
+                                CaptureRequest.CONTROL_AWB_MODE_AUTO
+                            )
                             //自动曝光
-                            previewBuilder!!.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON)
+                            previewBuilder!!.set(
+                                CaptureRequest.CONTROL_AE_MODE,
+                                CaptureRequest.CONTROL_AE_MODE_ON
+                            )
                             // 显示预览
                             val previewRequest = previewBuilder!!.build()
                             captureSession!!.setRepeatingRequest(previewRequest, null, childHandler)
@@ -182,7 +201,8 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
                     override fun onConfigureFailed(session: CameraCaptureSession) {
                         TODO("Not yet implemented")
                     }
-                }, childHandler
+                },
+                childHandler
             )
         } catch (e: CameraAccessException) {
             e.printStackTrace()
@@ -202,12 +222,16 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
             builder.addTarget(imageReader!!.surface)
             // 开启3A模式  自动对焦 自动白平衡 自动曝光
             // 自动对焦
-            builder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            builder.set(
+                CaptureRequest.CONTROL_AF_MODE,
+                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+            )
             //自动白平衡
             builder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
             //自动曝光
             builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            builder.set(CaptureRequest.JPEG_ORIENTATION,ORIENTATIONS.get(1)
+            builder.set(
+                CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(1)
             )
             val request = builder.build()
             captureSession!!.capture(request, null, childHandler)
@@ -217,23 +241,17 @@ class MainActivity : AppCompatActivity() ,View.OnClickListener{
     }
 
     fun closeCamera() {
-        cameraDevice!!.close()
-        cameraDevice = null
-        captureSession!!.close()
-        captureSession = null
+        cameraDevice?.close()
+        captureSession?.close()
     }
-
-    fun releaseCamera() {
-        cameraDevice!!.close()
-        cameraDevice = null
-        captureSession!!.close()
-        captureSession = null
-        imageReader!!.close()
-        imageReader = null
-        mainHandler!!.removeCallbacksAndMessages(null)
-        mainHandler = null
-        childHandler!!.removeCallbacksAndMessages(null)
-        childHandler = null
+    //  ?.意思是这个参数可以为空,并且程序继续运行下去
+    //  !!.的意思是这个参数如果为空,就抛出异常
+    private fun releaseCamera() {
+        cameraDevice?.close()
+        captureSession?.close()
+        imageReader?.close()
+        mainHandler?.removeCallbacksAndMessages(null)
+        childHandler?.removeCallbacksAndMessages(null)
     }
 
     override fun onDestroy() {
